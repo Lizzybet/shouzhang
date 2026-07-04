@@ -172,6 +172,21 @@ header .nav button{width:30px; height:30px; border-radius:50%; font-size:15px;
 .daytodos{margin:12px 0 2px; border-top:1px dashed var(--line-soft); padding-top:8px}
 .daytodos .cap{font-size:10.5px; letter-spacing:.2em; color:var(--sub); margin-bottom:2px}
 
+/* 编辑删除小钮 */
+.nctl{margin-left:auto; flex:none; display:flex; gap:5px; align-self:flex-start}
+.nctl button{width:23px; height:23px; border-radius:50%; border:1px solid var(--line);
+  background:var(--panel); color:var(--sub); font-size:11px; cursor:pointer;
+  opacity:.55; line-height:1}
+.nctl button:hover{opacity:1}
+.nctl.ex{position:absolute; top:-9px; right:8px}
+.edit-ta{flex:1; width:100%; border:1px solid var(--tangerine); border-radius:3px;
+  background:var(--paper); color:var(--ink); padding:6px 9px; font-size:15px;
+  line-height:1.8; font-family:"Kaiti SC","STKaiti","KaiTi",serif; resize:none;
+  overflow:hidden; outline:none}
+.edit-save{flex:none; align-self:flex-end; border:1px solid var(--tangerine);
+  color:var(--tangerine); background:var(--tangerine-soft); border-radius:3px;
+  padding:4px 12px; font-size:12.5px; cursor:pointer; margin-left:6px}
+
 /* 摘抄 */
 .excerpts{margin-top:12px; display:flex; flex-direction:column; gap:10px}
 .excerpt{position:relative; border:1px dashed var(--line); border-radius:3px;
@@ -323,7 +338,13 @@ footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em
     {% for n in daynotes %}
     <div class="note {{n.author}}">
       <div class="who">{{ {'qiao':'乔','ke':'克','yunke':'云'}[n.author] }}</div>
-      <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% endif %}{{n.content}}</p>
+      <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% endif %}<span class="ntext">{{n.content}}</span></p>
+      {% if n.author == 'qiao' %}
+      <span class="nctl">
+        <button onclick="editNote({{n.id}},'{{d.date}}',this)">✎</button>
+        <button onclick="delNote({{n.id}},'{{d.date}}')">✕</button>
+      </span>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -333,7 +354,14 @@ footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em
   {% if excerpts %}
   <div class="excerpts">
     {% for n in excerpts %}
-    <div class="excerpt"><span class="ex-tag">摘抄</span>{{n.content}}</div>
+    <div class="excerpt"><span class="ex-tag">摘抄</span><span class="ntext">{{n.content}}</span>
+      {% if n.author == 'qiao' %}
+      <span class="nctl ex">
+        <button onclick="editNote({{n.id}},'{{d.date}}',this)">✎</button>
+        <button onclick="delNote({{n.id}},'{{d.date}}')">✕</button>
+      </span>
+      {% endif %}
+    </div>
     {% endfor %}
   </div>
   {% endif %}
@@ -378,6 +406,23 @@ function addNote(kind, content, date){
   if(!content.trim()) return;
   remember(date || currentDate());
   post('/act/note', {date, kind, content}, true);
+}
+function delNote(id, date){
+  if(!confirm('把这条从手帐上划掉？')) return;
+  act('/act/note_del', {id}, date);
+}
+function editNote(id, date, btn){
+  const host = btn.closest('.note, .excerpt');
+  if (host.querySelector('.edit-ta')) return;
+  const span = host.querySelector('.ntext');
+  const ta = document.createElement('textarea');
+  ta.className = 'edit-ta'; ta.value = span.textContent;
+  const save = document.createElement('button');
+  save.className = 'edit-save'; save.textContent = '保存';
+  save.onclick = ()=>{ remember(date); post('/act/note_edit', {id, content: ta.value}, true) };
+  span.replaceWith(ta); host.appendChild(save);
+  ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px';
+  ta.oninput = ()=>grow(ta); ta.focus();
 }
 function delPhoto(id, date){
   if(!confirm('把这张照片从手帐上撕下来？')) return;

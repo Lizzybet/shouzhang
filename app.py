@@ -224,6 +224,17 @@ def act_todo_toggle():
         log_event('qiao', 'todo_done', today(), content[:80])
     return jsonify(ok=True, done=v)
 
+@app.route('/act/note_edit', methods=['POST'])
+@web_auth
+def act_note_edit():
+    content = request.form.get('content', '').strip()
+    if not content:
+        return jsonify(ok=False)
+    with db() as c:
+        c.execute("update notes set content=? where id=? and author='qiao'",
+                  (content, int(request.form['id'])))
+    return jsonify(ok=True)
+
 @app.route('/act/note_del', methods=['POST'])
 @web_auth
 def act_note_del():
