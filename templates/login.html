@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手帐 · 自宅版</title>
+<style>
+:root{--paper:#F7F5EF; --ink:#2B2925; --line:#DDD8CB; --harebell:#5F63B8; --panel:#fff}
+@media (prefers-color-scheme: dark){
+  :root{--paper:#20222C; --ink:#E7E4DA; --line:#3B3E4C; --harebell:#A3A7EA; --panel:#282B37}
+}
+body{background:var(--paper); color:var(--ink); display:flex; align-items:center;
+  justify-content:center; min-height:100vh; margin:0;
+  font-family:"PingFang SC",sans-serif}
+.card{text-align:center; padding:40px 30px}
+h1{font-family:"Songti SC",serif; font-size:24px; letter-spacing:.08em}
+input{border:1px solid var(--line); background:var(--panel); color:var(--ink);
+  border-radius:3px; padding:10px 14px; font-size:17px; text-align:center; width:200px}
+button{margin-top:14px; border:1px solid var(--harebell); color:var(--harebell);
+  background:transparent; border-radius:3px; padding:9px 30px; font-size:15px; cursor:pointer}
+.err{color:#C9581F; font-size:13px; height:18px}
+</style>
+</head>
+<body>
+<form class="card" method="post">
+  <h1>📔</h1>
+  <div class="err">{{err}}</div>
+  <input type="password" name="code" placeholder="口令" autofocus autocomplete="current-password">
+  <br><button>进门</button>
+</form>
+</body>
+</html>

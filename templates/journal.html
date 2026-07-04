@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>手帐 · 自宅版</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📔</text></svg>">
+<style>
+:root{
+  --paper:#F7F5EF; --panel:#FFFFFF; --ink:#2B2925; --sub:#6E6A61;
+  --harebell:#5F63B8; --harebell-soft:#EAEAF6;
+  --meadow:#5E7350; --meadow-soft:#EDF1E7;
+  --tangerine:#C9581F; --tangerine-soft:#F9EDE4;
+  --line:#DDD8CB; --line-soft:#ECE8DD;
+  --shadow:0 1px 3px rgba(43,41,37,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#20222C; --panel:#282B37; --ink:#E7E4DA; --sub:#9C99A6;
+    --harebell:#A3A7EA; --harebell-soft:#31344A;
+    --meadow:#9DB388; --meadow-soft:#2C3529;
+    --tangerine:#E5915B; --tangerine-soft:#3D2E24;
+    --line:#3B3E4C; --line-soft:#30333E;
+    --shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB",sans-serif; line-height:1.7;
+  padding-bottom:calc(30px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased;
+}
+.hand{font-family:"Kaiti SC","STKaiti","KaiTi","Songti SC",serif}
+.wrap{max-width:640px; margin:0 auto; padding:0 12px}
+
+header{padding:22px 2px 10px; border-bottom:2px solid var(--ink);
+  display:flex; align-items:baseline; gap:10px}
+header h1{font-family:"Songti SC","Noto Serif CJK SC",serif; font-size:20px;
+  letter-spacing:.05em; margin:0}
+header .tag{font-size:10.5px; letter-spacing:.2em; color:var(--sub)}
+header .nav{margin-left:auto; display:flex; gap:6px}
+header .nav button{width:30px; height:30px; border-radius:50%; font-size:15px;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer}
+
+/* 日历索引 */
+.cal{margin:10px 0 2px}
+.cal summary{font-size:12px; color:var(--sub); letter-spacing:.15em; cursor:pointer;
+  list-style:none; -webkit-tap-highlight-color:transparent}
+.cal summary::before{content:'📅 '}
+.cal-months{display:flex; gap:20px; flex-wrap:wrap; padding:10px 0 4px}
+.cal-m .m-label{font-size:11px; color:var(--sub); letter-spacing:.15em; margin-bottom:4px}
+.cal-grid{display:grid; grid-template-columns:repeat(7,26px); gap:3px}
+.cal-d{width:26px; height:26px; border-radius:50%; font-size:11.5px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  color:var(--sub); font-variant-numeric:tabular-nums; position:relative}
+.cal-d.filled{color:var(--ink); font-weight:600}
+.cal-d.filled::after{content:''; position:absolute; bottom:1px; width:4px; height:4px;
+  border-radius:50%; background:var(--meadow)}
+.cal-d.istoday{border:1.5px solid var(--tangerine); color:var(--tangerine)}
+.cal-d.blank{visibility:hidden}
+
+/* 置顶待办 */
+.todobox{margin:12px 0; background:var(--panel); border:1px solid var(--line);
+  border-radius:3px; box-shadow:var(--shadow); padding:12px 14px}
+.todobox .cap{font-size:10.5px; letter-spacing:.25em; color:var(--harebell);
+  font-weight:600; margin-bottom:6px}
+.todo{display:flex; gap:10px; align-items:flex-start; padding:3px 0; cursor:pointer}
+.todo .box{flex:none; width:16px; height:16px; margin-top:6px; border-radius:3px;
+  border:1.5px solid var(--sub); display:flex; align-items:center;
+  justify-content:center; font-size:11px; color:transparent}
+.todo.done .box{border-color:var(--meadow); background:var(--meadow-soft); color:var(--meadow)}
+.todo.done .txt{color:var(--sub); text-decoration:line-through}
+.todo .txt{font-size:14.5px}
+
+/* 翻页容器 */
+.pages{display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:12px; padding:4px 0 16px}
+.pages::-webkit-scrollbar{display:none}
+.day{flex:0 0 100%; scroll-snap-align:center; scroll-snap-stop:always;
+  background:var(--panel); border:1px solid var(--line); border-radius:4px;
+  box-shadow:var(--shadow); padding:16px 16px 14px}
+
+.day .head{display:flex; align-items:baseline; gap:12px; margin-bottom:12px}
+.day .dnum{font-family:"Songti SC",serif; font-size:32px; font-weight:700;
+  font-variant-numeric:tabular-nums; line-height:1}
+.day .dmeta{font-size:12px; color:var(--sub); letter-spacing:.1em}
+.day .today-badge{margin-left:auto; font-size:11px; letter-spacing:.15em;
+  color:var(--tangerine); border:1px solid currentColor; border-radius:999px; padding:1px 9px}
+
+.stamps{display:flex; flex-wrap:wrap; gap:10px 12px}
+.stamp{width:54px; text-align:center; cursor:pointer; -webkit-tap-highlight-color:transparent}
+.stamp .seal{width:43px; height:43px; margin:0 auto; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:18px;
+  border:1.6px solid var(--line); color:var(--line); transition:all .15s}
+.stamp.on .seal{border-color:var(--meadow); color:var(--meadow);
+  background:var(--meadow-soft); border-style:double; border-width:3.5px;
+  transform:rotate(-6deg)}
+.stamp:nth-child(even).on .seal{transform:rotate(4deg)}
+.stamp .lbl{font-size:10.5px; color:var(--sub); margin-top:4px}
+
+.water{display:flex; align-items:center; gap:9px; margin-top:14px; flex-wrap:wrap}
+.water .cap{font-size:11px; letter-spacing:.1em; color:var(--sub)}
+.cups{display:flex; gap:5px; flex-wrap:wrap}
+.cup{width:14px; height:19px; border:1.5px solid var(--harebell);
+  border-top-width:0; border-radius:0 0 5px 5px; opacity:.25}
+.cup.full{opacity:1; background:var(--harebell-soft)}
+.water .ml{font-size:12.5px; color:var(--harebell); font-variant-numeric:tabular-nums}
+.water button{font-size:15px; width:29px; height:29px; border-radius:50%;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer}
+
+.meta-row{display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap}
+.meta-row .cap{font-size:11px; letter-spacing:.1em; color:var(--sub)}
+.cells{display:inline-flex; gap:4px}
+.cell{width:12px; height:17px; border-radius:2px; border:1px solid var(--line); cursor:pointer}
+.cell.on{background:var(--harebell); border-color:var(--harebell)}
+.chip{font-size:12px; padding:2px 10px; border-radius:999px;
+  border:1px solid var(--line); color:var(--sub); cursor:pointer}
+.chip.on{border-color:var(--tangerine); color:var(--tangerine); background:var(--tangerine-soft)}
+
+/* 身体记录 */
+.body-row{display:flex; align-items:center; gap:8px; margin-top:10px}
+.body-row .cap{flex:none; font-size:11px; letter-spacing:.1em; color:var(--sub)}
+.body-row input{flex:1; border:none; border-bottom:1px dashed var(--line);
+  background:transparent; color:var(--ink); padding:4px 2px; font-size:14px;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif; outline:none}
+.body-row input:focus{border-bottom-color:var(--tangerine)}
+
+/* 拍立得 */
+.shots{display:flex; gap:14px; margin-top:16px; flex-wrap:wrap; align-items:flex-start}
+.polaroid{width:150px; background:var(--panel); border:1px solid var(--line);
+  padding:7px 7px 5px; border-radius:2px; box-shadow:var(--shadow);
+  transform:rotate(-1.8deg); position:relative}
+.shots > *:nth-child(even).polaroid{transform:rotate(1.6deg)}
+.polaroid .ph{width:100%; aspect-ratio:1; overflow:hidden; border-radius:1px;
+  background:var(--paper)}
+.polaroid .ph img{width:100%; height:100%; object-fit:cover}
+.polaroid .slot-tag{position:absolute; top:-7px; left:10px; font-size:10px;
+  letter-spacing:.1em; background:var(--harebell-soft); color:var(--harebell);
+  border-radius:2px; padding:0 6px; transform:rotate(-2deg)}
+.polaroid .del{position:absolute; top:-8px; right:-8px; width:22px; height:22px;
+  border-radius:50%; border:1px solid var(--line); background:var(--panel);
+  color:var(--sub); font-size:11px; cursor:pointer; line-height:1}
+.polaroid .capin{width:100%; border:none; background:transparent; color:var(--ink);
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif; -webkit-appearance:none; appearance:none;
+  font-size:12.5px; line-height:1.6; text-align:center; margin-top:5px; outline:none;
+  resize:none; overflow:hidden; display:block; padding:0}
+.polaroid .capin::placeholder{color:var(--line)}
+.addshot{width:74px; text-align:center}
+.addshot .frame{width:74px; height:74px; border:1.5px dashed var(--line); border-radius:3px;
+  display:flex; align-items:center; justify-content:center; color:var(--line);
+  font-size:19px; background:var(--paper); cursor:pointer}
+.addshot .cap{font-size:10px; color:var(--sub); margin-top:3px}
+.addshot input{display:none}
+
+/* 批注 · 随想 · 当日todo */
+.notes{margin-top:14px; border-top:1px dashed var(--line-soft); padding-top:10px;
+  display:flex; flex-direction:column; gap:8px}
+.note{display:flex; gap:10px; align-items:flex-start}
+.note .who{flex:none; width:22px; height:22px; margin-top:4px; border-radius:4px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:12px;
+  border:1.3px solid currentColor}
+.note.qiao .who{color:var(--tangerine); background:var(--tangerine-soft); transform:rotate(-3deg)}
+.note.ke .who,.note.yunke .who{color:var(--harebell); background:var(--harebell-soft); transform:rotate(2deg)}
+.note p{margin:0; font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:15px; line-height:1.85}
+.note .kind-tag{font-size:10px; color:var(--sub); letter-spacing:.15em; margin-right:6px}
+.daytodos{margin-top:12px; border-top:1px dashed var(--line-soft); padding-top:8px}
+.daytodos .cap{font-size:10.5px; letter-spacing:.2em; color:var(--sub); margin-bottom:2px}
+
+.writer{display:flex; gap:7px; margin-top:12px}
+.writer select{border:1px solid var(--line); background:var(--panel); color:var(--sub);
+  border-radius:3px; font-size:12px; padding:0 3px}
+.writer input[type=text]{flex:1; min-width:0; border:1px solid var(--line); background:var(--paper);
+  color:var(--ink); border-radius:3px; padding:7px 10px; font-size:15px;
+  -webkit-appearance:none; appearance:none;
+  font-family:"Kaiti SC","STKaiti","KaiTi",cursive,serif !important}
+.writer button{border:1px solid var(--harebell); color:var(--harebell);
+  background:var(--harebell-soft); border-radius:3px; padding:0 13px; font-size:13px;
+  cursor:pointer; flex:none}
+
+footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em; padding:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>我们的手帐 📔</h1>
+  <span class="tag">自宅版</span>
+  <span class="nav">
+    <button onclick="flip(-1)">‹</button>
+    <button onclick="flip(1)">›</button>
+  </span>
+</header>
+
+<details class="cal" id="cal">
+  <summary>日历</summary>
+  <div class="cal-months" id="cal-months"></div>
+</details>
+
+<div class="todobox">
+  <div class="cap">置顶待办</div>
+  {% for t in todos %}
+  <div class="todo {{'done' if t.done}}" onclick="post('/act/todo_toggle',{id:{{t.id}}},true)">
+    <div class="box">✓</div><div class="txt hand">{{t.content}}</div>
+  </div>
+  {% endfor %}
+  <div class="writer">
+    <input type="text" id="todo-pin" placeholder="长期挂着的事…">
+    <button onclick="addNote('todo', val('todo-pin'), '')">钉上</button>
+  </div>
+</div>
+</div>
+
+<div class="wrap">
+<div class="pages" id="pages">
+{% for d in days %}
+<article class="day" id="day-{{d.date}}" data-date="{{d.date}}"
+  data-filled="{{1 if d.battery or d.checks or d.notes or d.photos else 0}}">
+  <div class="head">
+    <span class="dnum">{{d.date[8:]}}</span>
+    <span class="dmeta">{{d.date[5:7]}}月 · {{d.weekday}}</span>
+    {% if d.date == today %}<span class="today-badge">今天</span>{% endif %}
+  </div>
+
+  <div class="stamps">
+    {% for h in habits if h.type == 'check' %}
+    <div class="stamp {{'on' if d.checks.get(h.id)}}" onclick="toggle(this,'{{d.date}}',{{h.id}})">
+      <div class="seal">{{h.glyph}}</div><div class="lbl">{{h.name}}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% for h in habits if h.type == 'water' %}
+  {% set cups = d.checks.get(h.id, 0) %}
+  <div class="water">
+    <span class="cap">喝水</span>
+    <span class="cups">
+      {% for i in range([cups, 8]|max) %}<span class="cup {{'full' if i < cups}}"></span>{% endfor %}
+    </span>
+    <span class="ml">{{cups * cup_ml}} ml</span>
+    <button onclick="water('{{d.date}}',1)">＋</button>
+    <button onclick="water('{{d.date}}',-1)">－</button>
+  </div>
+  {% endfor %}
+
+  <div class="meta-row">
+    <span class="cap">电量</span>
+    <span class="cells">
+      {% for i in range(5) %}
+      <span class="cell {{'on' if d.battery and i < d.battery}}"
+            onclick="act('/act/battery',{date:'{{d.date}}',value:{{i+1}}},'{{d.date}}')"></span>
+      {% endfor %}
+    </span>
+    <span class="chip {{'on' if d.period}}" onclick="act('/act/period',{date:'{{d.date}}'},'{{d.date}}')">经期</span>
+  </div>
+
+  <div class="body-row">
+    <span class="cap">身体</span>
+    <input type="text" value="{{d.symptoms}}" placeholder="潮热 / 头痛 / 盆腔痛 / 先兆…"
+      onchange="post('/act/symptoms',{date:'{{d.date}}',symptoms:this.value},false)">
+  </div>
+
+  <div class="shots">
+    {% set slotname = {'brunch':'brunch','snack':'加餐','dinner':'晚饭','casual':'随手拍'} %}
+    {% for p in d.photos %}
+    <div class="polaroid">
+      <span class="slot-tag">{{slotname.get(p.slot, p.slot)}}</span>
+      <button class="del" onclick="delPhoto({{p.id}},'{{d.date}}')">✕</button>
+      <div class="ph"><a href="/photo/{{p.id}}" target="_blank"><img src="/photo/{{p.id}}" alt="{{slotname.get(p.slot,'照片')}}"></a></div>
+      <textarea class="capin" rows="1" placeholder="写句注释…" oninput="grow(this)"
+        onchange="post('/act/photo_cap',{id:{{p.id}},caption:this.value},false)">{{p.caption or ''}}</textarea>
+    </div>
+    {% endfor %}
+    {% for key, label in [('brunch','brunch'),('snack','加餐'),('dinner','晚饭'),('casual','随手拍')] %}
+    <div class="addshot">
+      <form method="post" action="/act/upload" enctype="multipart/form-data">
+        <input type="hidden" name="date" value="{{d.date}}">
+        <input type="hidden" name="slot" value="{{key}}">
+        <label>
+          <div class="frame">＋</div>
+          <input type="file" name="photo" accept="image/*" onchange="remember('{{d.date}}');this.form.submit()">
+        </label>
+        <div class="cap">{{label}}</div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% set daynotes = d.notes | rejectattr('kind','equalto','todo') | list %}
+  {% if daynotes %}
+  <div class="notes">
+    {% for n in daynotes %}
+    <div class="note {{n.author}}">
+      <div class="who">{{ {'qiao':'乔','ke':'克','yunke':'云'}[n.author] }}</div>
+      <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% elif n.kind == 'excerpt' %}<span class="kind-tag">摘抄</span>{% endif %}{{n.content}}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set daytodos = d.notes | selectattr('kind','equalto','todo') | list %}
+  <div class="daytodos">
+    <div class="cap">当日待办</div>
+    {% for t in daytodos %}
+    <div class="todo {{'done' if t.done}}" onclick="act('/act/todo_toggle',{id:{{t.id}}},'{{d.date}}')">
+      <div class="box">✓</div><div class="txt hand">{{t.content}}</div>
+    </div>
+    {% endfor %}
+    <div class="writer">
+      <input type="text" id="todo-{{d.date}}" placeholder="这天要做的事…">
+      <button onclick="addNote('todo', val('todo-{{d.date}}'), '{{d.date}}')">记下</button>
+    </div>
+  </div>
+
+  <div class="writer">
+    <select id="kind-{{d.date}}">
+      <option value="note">留言</option>
+      <option value="thought">随想</option>
+      <option value="excerpt">摘抄</option>
+    </select>
+    <input type="text" id="note-in-{{d.date}}" placeholder="写点什么…">
+    <button onclick="addNote(sel('kind-{{d.date}}'), val('note-in-{{d.date}}'), '{{d.date}}')">落笔</button>
+  </div>
+</article>
+{% endfor %}
+</div>
+<footer>我们的手帐 · 2026夏 · 自宅版</footer>
+</div>
+
+<script>
+const TODAY = '{{today}}';
+const pages = document.getElementById('pages');
+
+function val(id){ return document.getElementById(id).value }
+function grow(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px' }
+window.addEventListener('load', ()=>document.querySelectorAll('.capin').forEach(grow));
+function sel(id){ return document.getElementById(id).value }
+function remember(date){ sessionStorage.setItem('lastday', date) }
+
+async function post(url, data, reload){
+  const r = await fetch(url, {method:'POST', body:new URLSearchParams(data)});
+  if (reload) location.reload();
+  return r.json();
+}
+function act(url, data, date){ remember(date || currentDate()); post(url, data, true) }
+async function toggle(el, date, habit){
+  const r = await post('/act/toggle', {date, habit});
+  el.classList.toggle('on', !!r.value);
+}
+function water(date, delta){ act('/act/water', {date, delta}, date) }
+function addNote(kind, content, date){
+  if(!content.trim()) return;
+  remember(date || currentDate());
+  post('/act/note', {date, kind, content}, true);
+}
+function delPhoto(id, date){
+  if(!confirm('把这张照片从手帐上撕下来？')) return;
+  act('/act/photo_del', {id}, date);
+}
+function currentDate(){
+  let best = TODAY, bestDist = 1e9;
+  document.querySelectorAll('.day').forEach(d=>{
+    const dist = Math.abs(d.getBoundingClientRect().left);
+    if (dist < bestDist){ bestDist = dist; best = d.dataset.date }
+  });
+  return best;
+}
+function goDay(date, smooth){
+  const el = document.getElementById('day-' + date);
+  if (el) el.scrollIntoView({behavior: smooth ? 'smooth' : 'auto', inline:'center', block:'nearest'});
+}
+function flip(dir){
+  pages.scrollBy({left: dir * pages.clientWidth, behavior:'smooth'});
+}
+
+/* 日历索引 */
+(function(){
+  const days = [...document.querySelectorAll('.day')];
+  const months = {};
+  days.forEach(d=>{
+    const m = d.dataset.date.slice(0,7);
+    (months[m] = months[m] || []).push(d);
+  });
+  const box = document.getElementById('cal-months');
+  Object.keys(months).sort().forEach(m=>{
+    const wrap = document.createElement('div'); wrap.className = 'cal-m';
+    wrap.innerHTML = `<div class="m-label">${m.replace('-','年')}月</div>`;
+    const grid = document.createElement('div'); grid.className = 'cal-grid';
+    const first = months[m][0].dataset.date;
+    const offset = (new Date(first + 'T12:00').getDay() + 6) % 7;
+    for (let i = 0; i < offset; i++){
+      const b = document.createElement('span'); b.className = 'cal-d blank'; grid.appendChild(b);
+    }
+    months[m].forEach(d=>{
+      const date = d.dataset.date;
+      const el = document.createElement('span');
+      el.className = 'cal-d' + (d.dataset.filled === '1' ? ' filled' : '') +
+                     (date === TODAY ? ' istoday' : '');
+      el.textContent = parseInt(date.slice(8), 10);
+      el.onclick = ()=>{ goDay(date, true); document.getElementById('cal').open = false };
+      grid.appendChild(el);
+    });
+    wrap.appendChild(grid); box.appendChild(wrap);
+  });
+})();
+
+/* 开页定位：上次操作的那天，否则今天 */
+window.addEventListener('load', ()=>{
+  const target = sessionStorage.getItem('lastday') || TODAY;
+  sessionStorage.removeItem('lastday');
+  requestAnimationFrame(()=>goDay(target, false));
+});
+</script>
+</body>
+</html>
