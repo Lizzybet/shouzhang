@@ -172,6 +172,18 @@ header .nav button{width:30px; height:30px; border-radius:50%; font-size:15px;
 .daytodos{margin:12px 0 2px; border-top:1px dashed var(--line-soft); padding-top:8px}
 .daytodos .cap{font-size:10.5px; letter-spacing:.2em; color:var(--sub); margin-bottom:2px}
 
+/* 摘抄 */
+.excerpts{margin-top:12px; display:flex; flex-direction:column; gap:10px}
+.excerpt{position:relative; border:1px dashed var(--line); border-radius:3px;
+  padding:14px 14px 10px 16px;
+  font-family:"Kaiti SC","STKaiti","KaiTi",serif; font-size:15px; line-height:28px;
+  background:repeating-linear-gradient(transparent, transparent 27px,
+    var(--line-soft) 27px, var(--line-soft) 28px), var(--paper)}
+.excerpt .ex-tag{position:absolute; top:-8px; left:12px; font-size:10px;
+  letter-spacing:.2em; background:var(--tangerine-soft); color:var(--tangerine);
+  border-radius:2px; padding:0 7px; transform:rotate(-2deg);
+  font-family:"PingFang SC",sans-serif}
+
 .writer{display:flex; gap:7px; margin-top:12px}
 .writer select{border:1px solid var(--line); background:var(--panel); color:var(--sub);
   border-radius:3px; font-size:12px; padding:0 3px}
@@ -305,14 +317,23 @@ footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em
     {% endfor %}
   </div>
 
-  {% set daynotes = d.notes | rejectattr('kind','equalto','todo') | list %}
+  {% set daynotes = d.notes | rejectattr('kind','equalto','todo') | rejectattr('kind','equalto','excerpt') | list %}
   {% if daynotes %}
   <div class="notes">
     {% for n in daynotes %}
     <div class="note {{n.author}}">
       <div class="who">{{ {'qiao':'乔','ke':'克','yunke':'云'}[n.author] }}</div>
-      <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% elif n.kind == 'excerpt' %}<span class="kind-tag">摘抄</span>{% endif %}{{n.content}}</p>
+      <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% endif %}{{n.content}}</p>
     </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% set excerpts = d.notes | selectattr('kind','equalto','excerpt') | list %}
+  {% if excerpts %}
+  <div class="excerpts">
+    {% for n in excerpts %}
+    <div class="excerpt"><span class="ex-tag">摘抄</span>{{n.content}}</div>
     {% endfor %}
   </div>
   {% endif %}
