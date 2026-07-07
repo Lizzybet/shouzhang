@@ -2,11 +2,11 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>手帐 · 自宅版</title>
 <link rel="apple-touch-icon" href="/icon.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📔</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐑</text></svg>">
 <style>
 :root{
   --paper:#F7F5EF; --panel:#FFFFFF; --ink:#2B2925; --sub:#6E6A61;
@@ -76,13 +76,23 @@ header .nav button{width:30px; height:30px; border-radius:50%; font-size:15px;
 .todo.done .txt{color:var(--sub); text-decoration:line-through}
 .todo .txt{font-size:14.5px}
 
-/* 翻页容器 */
-.pages{display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
-  -webkit-overflow-scrolling:touch; scrollbar-width:none; gap:12px; padding:4px 0 16px}
-.pages::-webkit-scrollbar{display:none}
-.day{flex:0 0 100%; scroll-snap-align:center; scroll-snap-stop:always;
-  background:var(--panel); border:1px solid var(--line); border-radius:4px;
-  box-shadow:var(--shadow); padding:16px 16px 14px}
+/* 叠牌翻页：卡片堆在舞台上，滑动抽牌 */
+.pages{position:relative; height:72vh; height:72dvh; margin:4px 0 30px;
+  touch-action:pan-y}
+.day{position:absolute; inset:0; display:none; overflow-y:auto;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; overscroll-behavior:contain;
+  background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  box-shadow:0 6px 22px rgba(43,41,37,.12); padding:16px 16px 56px;
+  will-change:transform}
+.day::-webkit-scrollbar{display:none}
+.day.top{display:block; z-index:3}
+.day.under{display:block; z-index:2; pointer-events:none;
+  transform:translateY(11px) rotate(1.4deg)}
+.day.under2{display:block; z-index:1; pointer-events:none;
+  transform:translateY(21px) rotate(-1.6deg)}
+.day.incoming{display:block; z-index:4; visibility:visible}
+.day.warm{display:block; visibility:hidden; z-index:0; pointer-events:none}
+.day.anim{transition:transform .28s cubic-bezier(.22,.9,.3,1)}
 
 .day .head{display:flex; align-items:baseline; gap:12px; margin-bottom:12px}
 .day .dnum{font-family:"Songti SC",serif; font-size:32px; font-weight:700;
@@ -137,9 +147,9 @@ header .nav button{width:30px; height:30px; border-radius:50%; font-size:15px;
   padding:7px 7px 5px; border-radius:2px; box-shadow:var(--shadow);
   transform:rotate(-1.8deg); position:relative}
 .shots > *:nth-child(even).polaroid{transform:rotate(1.6deg)}
-.polaroid .ph{width:100%; aspect-ratio:1; overflow:hidden; border-radius:1px;
+.polaroid .ph{width:100%; overflow:hidden; border-radius:1px;
   background:var(--paper)}
-.polaroid .ph img{width:100%; height:100%; object-fit:cover}
+.polaroid .ph img{width:100%; height:auto; display:block}
 .polaroid .slot-tag{position:absolute; top:-7px; left:10px; font-size:10px;
   letter-spacing:.1em; background:var(--harebell-soft); color:var(--harebell);
   border-radius:2px; padding:0 6px; transform:rotate(-2deg)}
@@ -232,8 +242,8 @@ footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em
 
 <div class="todobox">
   <div class="cap">置顶待办</div>
-  {% for t in todos %}
-  <div class="todo {{'done' if t.done}}" onclick="todoToggle({{t.id}},this)">
+  {% for t in todos if not t.done %}
+  <div class="todo" onclick="pinToggle({{t.id}},this)">
     <div class="box">✓</div><div class="txt hand">{{t.content}}</div>
   </div>
   {% endfor %}
@@ -339,7 +349,7 @@ footer{text-align:center; font-size:11px; color:var(--sub); letter-spacing:.15em
   <div class="notes">
     {% for n in daynotes %}
     <div class="note {{n.author}}">
-      <div class="who">{{ {'qiao':'乔','ke':'克','yunke':'云'}[n.author] }}</div>
+      <div class="who">{{ {'qiao':'乔','ke':'克','yunke':'克'}[n.author] }}</div>
       <p>{% if n.kind == 'thought' %}<span class="kind-tag">随想</span>{% endif %}<span class="ntext">{{n.content}}</span></p>
       {% if n.author == 'qiao' %}
       <span class="nctl">
@@ -425,6 +435,12 @@ async function todoToggle(id, el){
   const r = await post('/act/todo_toggle', {id});
   el.classList.toggle('done', !!r.done);
 }
+async function pinToggle(id, el){
+  el.querySelector('.box').style.cssText='border-color:var(--meadow);background:var(--meadow-soft);color:var(--meadow)';
+  await post('/act/todo_toggle', {id});
+  el.style.transition='opacity .5s'; el.style.opacity='0';
+  setTimeout(()=>el.remove(), 500);
+}
 function addNote(kind, content, date){
   if(!content.trim()) return;
   remember(date || currentDate());
@@ -451,21 +467,111 @@ function delPhoto(id, date){
   if(!confirm('把这张照片从手帐上撕下来？')) return;
   act('/act/photo_del', {id}, date);
 }
-function currentDate(){
-  let best = TODAY, bestDist = 1e9;
-  document.querySelectorAll('.day').forEach(d=>{
-    const dist = Math.abs(d.getBoundingClientRect().left);
-    if (dist < bestDist){ bestDist = dist; best = d.dataset.date }
+/* 叠牌抽卡引擎 */
+const deck = [...document.querySelectorAll('.day')];
+let idx = Math.max(0, deck.findIndex(d=>d.dataset.date===TODAY));
+
+function render(){
+  deck.forEach((d,i)=>{
+    d.classList.remove('top','under','under2','incoming','anim','warm');
+    d.style.transform='';
+    if(i===idx) d.classList.add('top');
+    else if(i===idx+1) d.classList.add('under');
+    else if(i===idx+2) d.classList.add('under2');
+    else if(i===idx+3 || i===idx-1) d.classList.add('warm');
   });
-  return best;
 }
-function goDay(date, smooth){
-  const el = document.getElementById('day-' + date);
-  if (el) el.scrollIntoView({behavior: smooth ? 'smooth' : 'auto', inline:'center', block:'nearest'});
+const POS_UNDER = 'translateY(11px) rotate(1.4deg)';
+const POS_UNDER2 = 'translateY(21px) rotate(-1.6deg)';
+function glide(el, transform){
+  if(!el) return;
+  el.classList.add('anim');
+  requestAnimationFrame(()=>{ el.style.transform = transform });
 }
-function flip(dir){
-  pages.scrollBy({left: dir * pages.clientWidth, behavior:'smooth'});
+function settleNext(){ glide(deck[idx+1],'translateY(0px) rotate(0deg)'); glide(deck[idx+2],POS_UNDER) }
+function settlePrev(){ glide(deck[idx],POS_UNDER); glide(deck[idx+1],POS_UNDER2) }
+function currentDate(){ return deck[idx] ? deck[idx].dataset.date : TODAY }
+function goDay(date, _smooth){
+  const i = deck.findIndex(d=>d.dataset.date===date);
+  if(i>=0){ idx=i; render(); deck[idx].scrollTop=0 }
 }
+function animTo(el, transform, done){
+  let fired = false;
+  const finish = ()=>{
+    if(fired) return; fired = true;
+    el.removeEventListener('transitionend', finish);
+    el.classList.remove('anim');
+    done && done();
+  };
+  el.classList.add('anim');
+  el.addEventListener('transitionend', finish);
+  setTimeout(finish, 400);
+  requestAnimationFrame(()=>{ el.style.transform = transform });
+}
+function next(){
+  if(idx >= deck.length-1) return;
+  settleNext();
+  animTo(deck[idx], 'translateX(-115%) rotate(-8deg)', ()=>{ idx++; render() });
+}
+function prev(){
+  if(idx <= 0) return;
+  const el = deck[idx-1];
+  el.classList.remove('warm'); el.classList.add('incoming');
+  el.style.transform = 'translateX(-115%) rotate(-7deg)';
+  el.scrollTop = 0;
+  settlePrev();
+  animTo(el, 'translateX(0px) rotate(0deg)', ()=>{ idx--; render() });
+}
+function flip(dir){ dir > 0 ? next() : prev() }
+render();
+
+/* 手势：横滑抽牌，竖滑交给卡片内部滚动 */
+(function(){
+  let sx=0, sy=0, dx=0, lock=null, mode=null, dragEl=null, w=1, t0=0;
+  pages.addEventListener('touchstart', e=>{
+    if(e.touches.length !== 1) return;
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY;
+    dx=0; lock=null; mode=null; dragEl=null; w=pages.clientWidth; t0=Date.now();
+  }, {passive:true});
+  pages.addEventListener('touchmove', e=>{
+    const mx=e.touches[0].clientX-sx, my=e.touches[0].clientY-sy;
+    if(lock===null){
+      if(Math.abs(mx)<8 && Math.abs(my)<8) return;
+      lock = Math.abs(mx) > Math.abs(my) ? 'h' : 'v';
+      if(lock==='h'){
+        if(mx<0 && idx<deck.length-1){ mode='next'; dragEl=deck[idx] }
+        else if(mx>0 && idx>0){ mode='prev'; dragEl=deck[idx-1];
+          dragEl.classList.remove('warm'); dragEl.classList.add('incoming'); dragEl.scrollTop=0 }
+        else lock='v';
+      }
+    }
+    if(lock!=='h') return;
+    e.preventDefault();
+    dx=mx;
+    if(mode==='next'){
+      const p=Math.min(0,dx);
+      dragEl.style.transform=`translateX(${p}px) rotate(${p/w*10}deg)`;
+    }else{
+      const p=Math.min(0, -w*1.08 + Math.max(0,dx));
+      dragEl.style.transform=`translateX(${p}px) rotate(${p/w*7}deg)`;
+      const g=Math.min(1, Math.max(0,dx)/w);
+      deck[idx].style.transform=`translateY(${g*11}px) rotate(${g*1.4}deg)`;
+    }
+  }, {passive:false});
+  pages.addEventListener('touchend', ()=>{
+    if(lock!=='h' || !dragEl){ lock=null; return }
+    const flew = Math.abs(dx) > w*0.3 || Math.abs(dx)/(Date.now()-t0) > 0.6;
+    if(mode==='next'){
+      if(flew){ settleNext(); animTo(dragEl,'translateX(-115%) rotate(-8deg)',()=>{ idx++; render() }) }
+      else animTo(dragEl,'translateX(0px) rotate(0deg)',()=>{ dragEl.style.transform='' });
+    }else{
+      if(flew){ settlePrev(); animTo(dragEl,'translateX(0px) rotate(0deg)',()=>{ idx--; render() }) }
+      else{ glide(deck[idx],'translateY(0px) rotate(0deg)');
+        animTo(dragEl,'translateX(-115%) rotate(-7deg)',()=>{ render() }) }
+    }
+    lock=null; dragEl=null;
+  });
+})();
 
 /* 日历索引 */
 (function(){
