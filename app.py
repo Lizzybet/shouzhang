@@ -53,7 +53,7 @@ def init_db():
         if not c.execute("select 1 from settings where key='start_date'").fetchone():
             c.execute("insert into settings values('start_date',?)",
                       (datetime.date.today().isoformat(),))
-        if not c.execute("select 1 from settings where key='passcode_hash").fetchone():
+        if not c.execute("select 1 from settings where key='passcode_hash'").fetchone():
             c.execute("insert into settings values('passcode_hash',?)",
                       (hashlib.sha256("shouzhang_sy726".encode()).hexdigest(),))
         if not c.execute("select 1 from habits").fetchone():
