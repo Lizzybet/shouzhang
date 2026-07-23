@@ -3,6 +3,7 @@
 import os, sqlite3, secrets, hashlib, time, datetime, functools
 from flask import (Flask, request, session, redirect, render_template,
                    jsonify, send_file, abort)
+import hashlib
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE, 'shouzhang.db')
@@ -52,6 +53,12 @@ def init_db():
         if not c.execute("select 1 from settings where key='start_date'").fetchone():
             c.execute("insert into settings values('start_date',?)",
                       (datetime.date.today().isoformat(),))
+        if not c.execute("select 1 from settings where key='passcode_hash").fetchone():
+            c.execute("insert into settings values('passcode_hash',?)",
+                      (hashlib.sha256("shouzhang_sy726".encode()).hexdigest(),))
+        if not c.execute("select 1 from habits").fetchone():
+            for n,g,t,s in [("12点前睡”,“睡”,"check",1),("喝够水“,“水","water",2),(”运动了”,，“动","check",3),("读了书”,“读”,"check",4)]:
+                c.execute("insert into habits(name,glyph,type,sort) values(?,?,?,?)",(n,g,t,s))  
 
 def setting(k, d=None):
     with db() as c:
