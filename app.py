@@ -386,4 +386,4 @@ def health():
 
 if __name__ == '__main__':
     # threaded: 单线程时一张照片传输会堵死所有请求
-    app.run(host='127.0.0.1', port=8787, threaded=True)
+    app.run(host='0.0.0.0', port=8787, threaded=True)
