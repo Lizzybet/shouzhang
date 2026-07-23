@@ -57,7 +57,7 @@ def init_db():
             c.execute("insert into settings values('passcode_hash',?)",
                       (hashlib.sha256("shouzhang_sy726".encode()).hexdigest(),))
         if not c.execute("select 1 from habits").fetchone():
-            for n,g,t,s in [("12点前睡”,“睡”,"check",1),("喝够水“,“水","water",2),(”运动了”,，“动","check",3),("读了书”,“读”,"check",4)]:
+            for n,g,t,s in [("12点前睡","睡","check",1),("喝够水","水","water",2),("运动了",，"动","check",3),("读了书","读","check",4)]:
                 c.execute("insert into habits(name,glyph,type,sort) values(?,?,?,?)",(n,g,t,s))  
 
 def setting(k, d=None):
